@@ -25,28 +25,27 @@ Nserve.prototype = {
     server:function (port=3000,home=projectPathUrl) {
         var _this = this;
         var server = http.createServer(function(req,res){
-            res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
             var fileName  = home + req.url;
             newCommand.console.warn("被请求资源："+req.url);
             fs.readFile( fileName, 'utf8',function( err, data ){
                 if( err ){
                     if(req.url == "/") {
+                        res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
                         _this.readdirStat(fileName,function (files) {
                             res.write(`<h1>目录列表</h1><hr>`);
                             for(var i = 0 ; i < files.length ; i++){
-                                res.write(`<a href="/${files[i]}" style="display: block;">${files[i]}</a>`);
+                                res.write(`<a href="${files[i]}" style="display: block;">${files[i]}</a>`);
                             }
                             res.end();
                         });
                     }else {
                         if(fs.existsSync(fileName)){
+                            res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
                             _this.readdirStat(fileName,function (files) {
                                 res.write(`<h1>目录列表</h1>`);
                                 res.write(`<span>当前URL：【${req.url}】</span>`);
-                                console.log(req.url.replace(/\/.*/,""))
-                                console.log(path.resolve("."+req.url,"."+req.url))
-                                console.log("================================")
-                                res.write(`<a href="${path.resolve("./"+req.url,"..")}" style="margin-left: 50px;">返回上一级</a><a href="/" style="margin-left: 50px;">返回首页</a>`);
+                                var BackUrl=  req.url.replace(/\/[^/]*\/$|\/[^/]*$/,'');
+                                res.write(`<a href="${(BackUrl.length > 0)? BackUrl : '/'}" style="margin-left: 50px;">返回上一级</a><a href="/" style="margin-left: 50px;">返回首页</a>`);
                                 res.write(`<hr>`);
                                 for(var i = 0 ; i < files.length ; i++){
                                     res.write(`<a href="${req.url}/${files[i]}" style="display: block;">${files[i]}</a>`);
@@ -54,11 +53,13 @@ Nserve.prototype = {
                                 res.end();
                             });
                         }else {
+                            res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
                             res.write('404');
                             res.end();
                         }
                     }
                 }else {
+                    res.writeHead(200, {'Content-type':`text/${path.extname(req.url)};charset=utf-8;`});
                     res.write(data);
                     res.end();
                 }
@@ -155,6 +156,9 @@ Nserve.prototype = {
             })(0);
         });
         return this;
+    },
+    mimeType:function () {
+        
     }
 }
 module.exports = Nserve;

@@ -1,17 +1,19 @@
 /**
- * @依赖包*/
-const command = require("ncommand");
-/**
  * @变量
  */
+const command = require("ncommand");
+const newCommand = new command();
 var version = require("./package.json").version;
 var http = require("http");
 var fs = require("fs");
+var path = require("path");
 const process = require("process");
+var projectPathUrl = process.cwd().replace(/\\/img,"\/");
 /**
- * Nserve快速搭建服务 by 张云山 on 2017/9/12 0012.
+ * Nserve快速搭建服务工具 by 张云山 on 2017/9/12 0012.
  */
-const Nserve = function () {
+const Nserve = function (option) {
+    option = option || {};
 
 };
 Nserve.prototype = {
@@ -20,86 +22,139 @@ Nserve.prototype = {
      * @param port
      * @param home
      */
-    server:function (port=3000,home='./') {
+    server:function (port=3000,home=projectPathUrl) {
         var _this = this;
-        _this.readDirList(home,function (fileList) {
-            var server = http.createServer(function( req, res ){
-                var fileName  = home + req.url;
-                fs.readFile( fileName, function( err, data ){
-                    if( err ){
-                        if(req.url == "/"){
+        var server = http.createServer(function(req,res){
+            res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+            var fileName  = home + req.url;
+            newCommand.console.warn("被请求资源："+req.url);
+            fs.readFile( fileName, 'utf8',function( err, data ){
+                if( err ){
+                    if(req.url == "/") {
+                        _this.readdirStat(fileName,function (files) {
                             res.write(`<h1>目录列表</h1><hr>`);
-                            for(var i = 0 ; i < fileList.length ; i++){
-                                res.write(`<a href="/${fileList[i]}" style="display: block;">${fileList[i]}</a>`);
+                            for(var i = 0 ; i < files.length ; i++){
+                                res.write(`<a href="/${files[i]}" style="display: block;">${files[i]}</a>`);
                             }
                             res.end();
+                        });
+                    }else {
+                        if(fs.existsSync(fileName)){
+                            _this.readdirStat(fileName,function (files) {
+                                res.write(`<h1>目录列表</h1>`);
+                                res.write(`<span>当前URL：【${req.url}】</span>`);
+                                console.log(req.url.replace(/\/.*/,""))
+                                console.log(path.resolve("."+req.url,"."+req.url))
+                                console.log("================================")
+                                res.write(`<a href="${path.resolve("./"+req.url,"..")}" style="margin-left: 50px;">返回上一级</a><a href="/" style="margin-left: 50px;">返回首页</a>`);
+                                res.write(`<hr>`);
+                                for(var i = 0 ; i < files.length ; i++){
+                                    res.write(`<a href="${req.url}/${files[i]}" style="display: block;">${files[i]}</a>`);
+                                }
+                                res.end();
+                            });
                         }else {
                             res.write('404');
+                            res.end();
                         }
-                    }else {
-                        res.write( data );
                     }
+                }else {
+                    res.write(data);
                     res.end();
-                } );
-            }).listen( 3000 );
+                }
+            })
+        });
+        server.listen(port,null,function () {
+            newCommand.console.info(`Server running at http://127.0.0.1:${port}/`);
         });
         return this;
     },
     /**
-     * @获取目录下面的文件列表
-     * @param {String} home
+     * @文件目录读取异步转同步
+     *
+     * //==================目录路径
+     * //默认为当前执行目录
+     * @param {String} path
+     *
+     * //==================配置，编码等
+     * //默认为Utf8编码
+     * @param {Object} option
+     *
+     * //============================readdirStat成功回调
+     * 例如：callback(files) files 是文件目录的列表文件Array，承接上下文
      * @param {function} callback
+     *
+     * @return this 上下文
      */
-    readDirList:function (home='./',callback = new Function) {
+    readdirStat:function (path,option,callback) {
+        path = path || projectPathUrl;
+        option = option || {encoding:"utf8"};
+        callback = callback || new Function;
         var _this = this;
-        fs.readdir(home,function(err,files) {
+        var directoryArr = [];
+        //数据验证
+        switch (callback.constructor.name){
+            case "Function":
+                callback = callback;
+                break;
+            default:
+                newCommand.ERR(`Nserve对象的readdirStat方法的callback参数类型错误。应该是个Function，当前是${callback.constructor.name}`);
+                break;
+        }
+        switch (option.constructor.name){
+            case "Function":
+                callback = option;
+                option = {encoding:"utf8"};
+                break;
+            case "Object":
+                option = option;
+                if(!option.encoding){
+                    option.encoding = "utf8";
+                };
+                if(option.encoding.constructor.name != "String"){
+                    newCommand.ERR(`Nserve对象的readdirStat方法的option.encoding参数类型错误。应该是个String，当前是${option.encoding.constructor.name}`);
+                };
+                break;
+            default:
+                newCommand.ERR(`Nserve对象的readdirStat方法的option参数类型错误。应该是个Object，当前是${option.constructor.name}`);
+                break;
+        }
+        switch (path.constructor.name){
+            case "Function":
+                callback = path;
+                path = projectPathUrl;
+                break;
+            case "Object":
+                option = path;
+                path = projectPathUrl;
+                break;
+            case "String":
+                path = path;
+                break;
+            default:
+                newCommand.ERR(`Nserve对象的readdirStat方法的path参数类型错误。应该是个String，当前是${path.constructor.name}`);
+                break;
+        }
+        fs.readdir(path,option, function(err,files){
             if (err) {
                 console.log(err);
                 return;
             };
-            callback.call(_this,files);
+            (function iterator(i){
+                if(i == files.length) {
+                    callback.call(_this,files);
+                } else {
+                    fs.stat(path + "/" + files[i], function(err,data){
+                        if(err) throw err;
+                        if(data.isDirectory()) {
+                            directoryArr.push(files[i]);
+                        }
+                        iterator(i+1);
+                    });
+                }
+            })(0);
         });
         return this;
     }
 }
-const newNserve = new Nserve();
-new command()
-    .Commands({
-        log:["-c","创建一个服务,默认是当前执行命令的路径,如果需要指定服务路径，请使用【-p】命令，端口为3000,如果需要指定端口，请使用【-s】命令"],
-        callback:function () {
-            newNserve.server();
-            this.init(null,Function);
-            return true;
-        }
-    })
-    .Commands({
-        log:["-s","...warn('<port>')","一个端口，创建一个指定的端口服务"],
-        callback:function () {
-
-        }
-    })
-    .Commands({
-        log:["-p","...warn('<PathUrl>')","一个路径，指定需创建服务的文件路径"],
-        callback:function () {
-
-        }
-    })
-    .Options({
-        log:["help","查看帮助命令"]
-    })
-    .Options({
-        log:["-h","查看帮助命令"]
-    })
-    .Options({
-        log:["-v","查看版本号"],
-        callback:function () {
-            console.log(version);
-        }
-    })
-    .Options({
-        log:["--version","查看版本号"],
-        callback:function () {
-            console.log(version);
-        }
-    })
-    .init(null,Function);
+module.exports = Nserve;

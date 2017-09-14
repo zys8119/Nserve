@@ -36,8 +36,7 @@ const Nserve = function (option) {
 Nserve.prototype = {
     /**
      * @创建服务
-     * @param port
-     * @param home
+     * @param {Object} option
      */
     server:function (option) {
         option = option || {};
@@ -54,6 +53,27 @@ Nserve.prototype = {
         }else if(option.host && option.host !== null && option.host.constructor.name != "String"){
             newCommand.ERR(`Nserve对象serve方法的option.host 参数类型错误，
             应该是一个 String或null，当前是${option.host.constructor.name}`);
+        }else if(option.headers && option.headers.constructor.name != "Object"){
+            newCommand.ERR(`Nserve对象serve方法的option.headers 参数类型错误，
+            应该是一个 Object，当前是${option.headers.constructor.name}`);
+        }else if(option.callback && option.callback.constructor.name != "Function"){
+            newCommand.ERR(`Nserve对象serve方法的option.callback 参数类型错误，
+            应该是一个 Function，当前是${option.callback.constructor.name}`);
+        }else if(option.page404 && option.page404.constructor.name != "String"){
+            newCommand.ERR(`Nserve对象serve方法的option.page404 参数类型错误，
+            应该是一个 String，当前是${option.page404.constructor.name}`);
+        }else if(option.cssStyle && option.cssStyle.constructor.name != "String"){
+            newCommand.ERR(`Nserve对象serve方法的option.cssStyle 参数类型错误，
+            应该是一个 String，当前是${option.cssStyle.constructor.name}`);
+        }else if(option.DirectoryTitle && option.DirectoryTitle.constructor.name != "String"){
+            newCommand.ERR(`Nserve对象serve方法的option.DirectoryTitle 参数类型错误，
+            应该是一个 String，当前是${option.DirectoryTitle.constructor.name}`);
+        }else if(option.isShowDirectory && option.isShowDirectory.constructor.name != "Boolean"){
+            newCommand.ERR(`Nserve对象serve方法的option.isShowDirectory 参数类型错误，
+            应该是一个 Boolean，当前是${option.isShowDirectory.constructor.name}`);
+        }else if(option.InitHomefile && option.InitHomefile.constructor.name != "String" && option.InitHomefile.constructor.name != "Array"){
+            newCommand.ERR(`Nserve对象serve方法的option.InitHomefile 参数类型错误，
+            应该是一个 String|Array，当前是${option.InitHomefile.constructor.name}`);
         };
         var  optionExtend =  {
             port:3000,//监听端口
@@ -64,41 +84,26 @@ Nserve.prototype = {
             callback:new Function,//服务回调，上下文是当前server，参数是当前Nserve
             page404:"./404.html",//404页路径，默认是根目录下的404.html
             //默认的目录页面css样式
-            cssStyle:`
-            @font-face {
-              font-family: 'iconfont';  /* project id 415895 */
-              src: url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.eot');
-              src: url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.eot?#iefix') format('embedded-opentype'),
-              url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.woff') format('woff'),
-              url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.ttf') format('truetype'),
-              url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.svg#iconfont') format('svg');
-            }
-            a{
-                line-height: 40px;
-                text-decoration: none;
-            }
-            a span{
-                font-family: 'iconfont';
-                margin-right: 5px;
-            }
-            a span.Directory{
-                color: #ff8100;
-            }
-            a span.back,a span.home{
-                color: #000000;
-            }
-            a span.file{
-                color:#944b00;
-            }
-            a:hover{
-                background-color:#e5e5e5;
-            }
-            `,
-            DirectoryTitle:"目录列表",
+            cssStyle:`@font-face{font-family:'iconfont';src:url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.eot');src:url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.eot?#iefix') format('embedded-opentype'),url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.woff') format('woff'),url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.ttf') format('truetype'),url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.svg#iconfont') format('svg')}a{line-height:40px;text-decoration:none}a span{font-family:'iconfont';margin-right:5px}a span.Directory{color:#ff8100}a span.back,a span.home{color:#000}a span.file{color:#944b00}a:hover{background-color:#e5e5e5}`,
+            DirectoryTitle:"目录列表",//目录浏览标题
+            isShowDirectory:true,//是否允许显示目录列表，默认显示
+            InitHomefile:"a.html",//目录页面默认请求的文件
         };
         //追加或替换option
         for(var i in option){
-            optionExtend[i] = option[i];
+            if(option[i]){
+                switch (i){
+                    case "cssStyle":
+                        //追加样式
+                        optionExtend[i] += option[i];
+                        break;
+                    default:
+                        optionExtend[i] = option[i];
+                        break;
+                };
+            }else if(i == "host"){
+                optionExtend[i] = option[i];
+            };
         };
         var host = "127.0.0.1";
         if(optionExtend.host !== null){
@@ -119,36 +124,30 @@ Nserve.prototype = {
                 if( err ){
                     //设置目录css样式
                     if(req.url == "/") {
-                        res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                        _this.readdirStat(fileName,function (files) {
-                            res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
-                            res.write(`<span>当前URL：${req.url}    (${files.length}个文件)</span>`);
-                            res.write(`<hr>`);
-                            for(var i = 0 ; i < files.length ; i++){
-                                res.write(`<a href="${files[i]}" style="display: block;">${(function () {
-                                    var stat = fs.lstatSync(fileName+files[i]);
-                                    if(stat.isDirectory()){
-                                        return `<span class="Directory">&#xe60f;</span>`;
-                                    };
-                                    return `<span class="file">&#xe647;</span>`;
-                                })()+files[i]}</a>`);
-                            }
-                            res.write(`<style>${optionExtend.cssStyle}</style>`);
-                            res.end();
-                        });
-                    }else {
-                        if(fs.existsSync(fileName)){
-                            res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                        if(optionExtend.isShowDirectory){
                             _this.readdirStat(fileName,function (files) {
+                                // for(var i = 0,len = files.length ;i<len; i++){
+                                //     if(files[i] == optionExtend.InitHomefile){
+                                //         fs.readFile("."+req.url+files[i],function( err, data ){
+                                //             if( err ){
+                                //                 console.log(err)
+                                //                 return;
+                                //             }
+                                //             console.log(data)
+                                //             res.write(data);
+                                //             res.end();
+                                //         });
+                                //         break;
+                                //     }
+                                // };
+                                res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
                                 res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
-                                res.write(`<span>当前URL：【${req.url}】(${files.length}个文件)</span>`);
-                                var BackUrl=  req.url.replace(/\/[^/]*\/$|\/[^/]*$/,'');
-                                res.write(`<a href="${(BackUrl.length > 0)? BackUrl : '/'}" style="margin-left: 50px;"><span>&#xe607;</span>返回上一级</a><a href="/" style="margin-left: 50px;"><span>&#xe608;</span>返回首页</a>`);
+                                res.write(`<span>当前URL：${req.url}    (${files.length}个文件)</span>`);
                                 res.write(`<hr>`);
-                                for(var i = 0 ; i < files.length ; i++){
-                                    res.write(`<a href="${req.url}/${files[i]}" style="display: block;">${(function () {
-                                        var stat1 = fs.lstatSync(fileName+"/"+files[i]);
-                                        if(stat1.isDirectory()){
+                                for(var i = 0,len = files.length ;i<len; i++){
+                                    res.write(`<a href="${files[i]}" style="display: block;">${(function () {
+                                        var stat = fs.lstatSync(fileName+files[i]);
+                                        if(stat.isDirectory()){
                                             return `<span class="Directory">&#xe60f;</span>`;
                                         };
                                         return `<span class="file">&#xe647;</span>`;
@@ -157,6 +156,38 @@ Nserve.prototype = {
                                 res.write(`<style>${optionExtend.cssStyle}</style>`);
                                 res.end();
                             });
+                        }else {
+                            res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                            res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
+                            res.end();
+                        }
+                    }else {
+                        if(fs.existsSync(fileName)){
+                            if(optionExtend.isShowDirectory){
+                                res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                                _this.readdirStat(fileName,function (files) {
+                                    res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
+                                    res.write(`<span>当前URL：【${req.url}】(${files.length}个文件)</span>`);
+                                    var BackUrl=  req.url.replace(/\/[^/]*\/$|\/[^/]*$/,'');
+                                    res.write(`<a href="${(BackUrl.length > 0)? BackUrl : '/'}" style="margin-left: 50px;"><span>&#xe607;</span>返回上一级</a><a href="/" style="margin-left: 50px;"><span>&#xe608;</span>返回首页</a>`);
+                                    res.write(`<hr>`);
+                                    for(var i = 0,len =  files.length ; i <len; i++){
+                                        res.write(`<a href="${req.url}/${files[i]}" style="display: block;">${(function () {
+                                            var stat1 = fs.lstatSync(fileName+"/"+files[i]);
+                                            if(stat1.isDirectory()){
+                                                return `<span class="Directory">&#xe60f;</span>`;
+                                            };
+                                            return `<span class="file">&#xe647;</span>`;
+                                        })()+files[i]}</a>`);
+                                    }
+                                    res.write(`<style>${optionExtend.cssStyle}</style>`);
+                                    res.end();
+                                });
+                            }else {
+                                res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                                res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
+                                res.end();
+                            }
                         }else {
                             if(fs.existsSync(optionExtend.page404)){
                                 fs.readFile( optionExtend.page404,function( err, page404Data ){
@@ -169,7 +200,7 @@ Nserve.prototype = {
                                     res.end();
                                 });
                             }else {
-                                res.writeHead(404, {'Content-type' : 'text/html; charset=utf-8'});
+                                res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
                                 res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
                                 res.end();
                             }

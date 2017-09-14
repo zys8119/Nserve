@@ -1,7 +1,8 @@
 var Nserve = require('./index');
 var a = new Nserve()
     .server({
-        port:83,
-        host:"192.168.1.80"
+        port:82,
+        page404:"bin/index.html",
+        // InitHomefile:[],
     })
 // console.log(a)

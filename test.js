@@ -1,5 +1,4 @@
 var Nserve = require('./index');
-new Nserve()
-    .readdirStat(function (e) {
-        console.log(this.readdirStat,e)
-    })
+var a = new Nserve()
+    .server()
+console.log(a)

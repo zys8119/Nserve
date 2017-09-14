@@ -2,6 +2,8 @@ a{
     padding-left: 30px;
     position: relative;
     margin-right: 5px;
+    text-decoration: none;
+    color: #93fff8;
 }
 @font-face {
     font-family: 'iconfont';  /* project id 415895 */

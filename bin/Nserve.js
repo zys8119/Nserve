@@ -2,6 +2,7 @@
  * @依赖包*/
 const command = require("ncommand");
 const Nserve = require("../index");
+var version = require("../package.json").version;
 
 const newCommand = new command();
 const newNserve = new Nserve();

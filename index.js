@@ -39,20 +39,71 @@ Nserve.prototype = {
      * @param port
      * @param home
      */
-    server:function (port=3000,home=projectPathUrl) {
+    server:function (option) {
+        option = option || {};
+        if(option.constructor.name != "Object"){
+            newCommand.ERR(`Nserve对象serve方法的option参数类型错误，
+            应该是一个Object，当前是${option.constructor.name}`);
+        };
+        var  optionExtend =  {
+            port:3000,//监听端口
+            home:projectPathUrl,//服务目录路径
+            host:null,//监听地址，默认是null，即127.0.0.1/localhost/您的ip地址
+            //headers头，可写入资源请求的headers头
+            headers:{},
+            callback:new Function,//服务回调，上下文是当前server，参数是当前Nserve
+            page404:"./404.html",//404页路径，默认是根目录下的404.html
+            cssStyle:`
+            @font-face {
+              font-family: 'iconfont';  /* project id 415895 */
+              src: url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.eot');
+              src: url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.eot?#iefix') format('embedded-opentype'),
+              url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.woff') format('woff'),
+              url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.ttf') format('truetype'),
+              url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.svg#iconfont') format('svg');
+            }
+            a{
+                line-height: 40px;
+            }
+            a span{
+                font-family: 'iconfont';
+                margin-right: 5px;
+            }
+            a:hover{
+                background-color:#e5e5e5;
+            }
+            `,//默认的目录页面css样式
+        };
+        //追加或替换option
+        for(var i in option){
+            optionExtend[i] = option[i];
+        };
+        var host = "127.0.0.1";
+        if(optionExtend.host !== null){
+            host = optionExtend.host;
+        }
+        var port=optionExtend.port;
+        var home=optionExtend.home;
         var _this = this;
         var server = http.createServer(function(req,res){
             var fileName  = home + req.url;
-            newCommand.console.warn("被请求资源："+req.url);
+            newCommand.console.warn("[请求资源]："+req.url);
             fs.readFile( fileName,function( err, data ){
+                //设置Header头
+                for(var h in optionExtend.headers){
+                    res.setHeader(h,optionExtend.headers[h]);
+                };
+                //判断
                 if( err ){
+                    //设置目录css样式
                     if(req.url == "/") {
                         res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
                         _this.readdirStat(fileName,function (files) {
                             res.write(`<h1>目录列表</h1><hr>`);
                             for(var i = 0 ; i < files.length ; i++){
-                                res.write(`<a href="${files[i]}" style="display: block;">${files[i]}</a>`);
+                                res.write(`<a href="${files[i]}" style="display: block;"><span>&#xe60f;</span>${files[i]}</a>`);
                             }
+                            res.write(`<style>${optionExtend.cssStyle}</style>`);
                             res.end();
                         });
                     }else {
@@ -65,14 +116,27 @@ Nserve.prototype = {
                                 res.write(`<a href="${(BackUrl.length > 0)? BackUrl : '/'}" style="margin-left: 50px;">返回上一级</a><a href="/" style="margin-left: 50px;">返回首页</a>`);
                                 res.write(`<hr>`);
                                 for(var i = 0 ; i < files.length ; i++){
-                                    res.write(`<a href="${req.url}/${files[i]}" style="display: block;">${files[i]}</a>`);
+                                    res.write(`<a href="${req.url}/${files[i]}" style="display: block;"><span>&#xe60f;</span>${files[i]}</a>`);
                                 }
+                                res.write(`<style>${optionExtend.cssStyle}</style>`);
                                 res.end();
                             });
                         }else {
-                            res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                            res.write('404');
-                            res.end();
+                            if(fs.existsSync(optionExtend.page404)){
+                                fs.readFile( optionExtend.page404,function( err, page404Data ){
+                                    if(err){
+                                        console.log(err);
+                                        return;
+                                    };
+                                    res.writeHead(200, {'Content-type':`${_this.getmimeType(path.extname(req.url))};`});
+                                    res.write(page404Data);
+                                    res.end();
+                                });
+                            }else {
+                                res.writeHead(404, {'Content-type' : 'text/html; charset=utf-8'});
+                                res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
+                                res.end();
+                            }
                         }
                     }
                 }else {
@@ -82,8 +146,19 @@ Nserve.prototype = {
                 }
             })
         });
-        server.listen(port,null,function () {
-            newCommand.console.info(`Server running at http://127.0.0.1:${port}/`);
+        server.listen(port,optionExtend.host,function () {
+            newCommand.console.log(`Nserve V:${version} 服务器创建成功 ${new Date()}`);
+            newCommand.console.color(function () {
+                this.info("侦听：").warn(`HTTP://${host}:${port}/`);
+            });
+            newCommand.console.color(function () {
+                this.info("文档根目录：").warn(`${home}/`);
+            });
+            newCommand.console.color(function () {
+                this.info("按【").warn("Ctrl-C").info("】退出");
+            });
+            console.log("----------------------------------");
+            optionExtend.callback.call(server,_this);
         });
         return this;
     },

@@ -101,7 +101,7 @@ Nserve.prototype = {
                         optionExtend[i] = option[i];
                         break;
                 };
-            }else if(i == "host"){
+            }else if(i == "host"|| i == "InitHomefile"){
                 optionExtend[i] = option[i];
             };
         };
@@ -142,6 +142,7 @@ Nserve.prototype = {
                                     };
                                 }else {
                                     res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                                    res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
                                     res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
                                     res.write(`<span>当前URL：${req.url}    (${files.length}个文件)</span>`);
                                     res.write(`<hr>`);
@@ -168,6 +169,7 @@ Nserve.prototype = {
                             if(optionExtend.isShowDirectory){
                                 res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
                                 _this.readdirStat(fileName,function (files) {
+                                    res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
                                     res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
                                     res.write(`<span>当前URL：【${req.url}】(${files.length}个文件)</span>`);
                                     var BackUrl=  req.url.replace(/\/[^/]*\/$|\/[^/]*$/,'');
@@ -187,6 +189,7 @@ Nserve.prototype = {
                                 });
                             }else {
                                 res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                                res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
                                 res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
                                 res.end();
                             }
@@ -203,6 +206,7 @@ Nserve.prototype = {
                                 });
                             }else {
                                 res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                                res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
                                 res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
                                 res.end();
                             }
@@ -210,6 +214,7 @@ Nserve.prototype = {
                     }
                 }else {
                     res.writeHead(200, {'Content-type':`${_this.getmimeType(path.extname(req.url))};`});
+                    res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
                     res.write(data);
                     res.end();
                 }

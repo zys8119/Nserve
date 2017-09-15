@@ -3,6 +3,6 @@ var a = new Nserve()
     .server({
         port:82,
         page404:"bin/index.html",
-        // InitHomefile:[],
+        InitHomefile:null,
     })
 // console.log(a)

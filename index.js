@@ -87,7 +87,7 @@ Nserve.prototype = {
             cssStyle:`@font-face{font-family:'iconfont';src:url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.eot');src:url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.eot?#iefix') format('embedded-opentype'),url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.woff') format('woff'),url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.ttf') format('truetype'),url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.svg#iconfont') format('svg')}a{line-height:40px;text-decoration:none}a span{font-family:'iconfont';margin-right:5px}a span.Directory{color:#ff8100}a span.back,a span.home{color:#000}a span.file{color:#944b00}a:hover{background-color:#e5e5e5}`,
             DirectoryTitle:"目录列表",//目录浏览标题
             isShowDirectory:true,//是否允许显示目录列表，默认显示
-            InitHomefile:"a.html",//目录页面默认请求的文件
+            InitHomefile:"index.html",//目录页面默认请求的文件
         };
         //追加或替换option
         for(var i in option){
@@ -126,35 +126,37 @@ Nserve.prototype = {
                     if(req.url == "/") {
                         if(optionExtend.isShowDirectory){
                             _this.readdirStat(fileName,function (files) {
-                                // for(var i = 0,len = files.length ;i<len; i++){
-                                //     if(files[i] == optionExtend.InitHomefile){
-                                //         fs.readFile("."+req.url+files[i],function( err, data ){
-                                //             if( err ){
-                                //                 console.log(err)
-                                //                 return;
-                                //             }
-                                //             console.log(data)
-                                //             res.write(data);
-                                //             res.end();
-                                //         });
-                                //         break;
-                                //     }
-                                // };
-                                res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                                res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
-                                res.write(`<span>当前URL：${req.url}    (${files.length}个文件)</span>`);
-                                res.write(`<hr>`);
-                                for(var i = 0,len = files.length ;i<len; i++){
-                                    res.write(`<a href="${files[i]}" style="display: block;">${(function () {
-                                        var stat = fs.lstatSync(fileName+files[i]);
-                                        if(stat.isDirectory()){
-                                            return `<span class="Directory">&#xe60f;</span>`;
-                                        };
-                                        return `<span class="file">&#xe647;</span>`;
-                                    })()+files[i]}</a>`);
+                                if(fs.existsSync("."+req.url+optionExtend.InitHomefile)){
+                                    for(var i = 0,len = files.length ;i<len; i++){
+                                        if(files[i] == optionExtend.InitHomefile){
+                                            fs.readFile("."+req.url+files[i],function( err, data ){
+                                                if( err ){
+                                                    console.log(err)
+                                                    return;
+                                                }
+                                                res.write(data);
+                                                res.end();
+                                            });
+                                            break;
+                                        }
+                                    };
+                                }else {
+                                    res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                                    res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
+                                    res.write(`<span>当前URL：${req.url}    (${files.length}个文件)</span>`);
+                                    res.write(`<hr>`);
+                                    for(var i = 0,len = files.length ;i<len; i++){
+                                        res.write(`<a href="${files[i]}" style="display: block;">${(function () {
+                                            var stat = fs.lstatSync(fileName+files[i]);
+                                            if(stat.isDirectory()){
+                                                return `<span class="Directory">&#xe60f;</span>`;
+                                            };
+                                            return `<span class="file">&#xe647;</span>`;
+                                        })()+files[i]}</a>`);
+                                    }
+                                    res.write(`<style>${optionExtend.cssStyle}</style>`);
+                                    res.end();
                                 }
-                                res.write(`<style>${optionExtend.cssStyle}</style>`);
-                                res.end();
                             });
                         }else {
                             res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});

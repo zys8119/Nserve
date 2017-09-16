@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * @变量
  */
@@ -56,6 +57,12 @@ Nserve.prototype = {
         }else if(option.headers && option.headers.constructor.name != "Object"){
             newCommand.ERR(`Nserve对象serve方法的option.headers 参数类型错误，
             应该是一个 Object，当前是${option.headers.constructor.name}`);
+        }else if(option.callbackDirectorySuccess && option.callbackDirectorySuccess.constructor.name != "Function"){
+            newCommand.ERR(`Nserve对象serve方法的option.callbackDirectorySuccess 参数类型错误，
+            应该是一个 Function，当前是${option.callback.constructor.name}`);
+        }else if(option.callbackStart && option.callbackStart.constructor.name != "Function"){
+            newCommand.ERR(`Nserve对象serve方法的option.callbackStart 参数类型错误，
+            应该是一个 Function，当前是${option.callback.constructor.name}`);
         }else if(option.callback && option.callback.constructor.name != "Function"){
             newCommand.ERR(`Nserve对象serve方法的option.callback 参数类型错误，
             应该是一个 Function，当前是${option.callback.constructor.name}`);
@@ -81,13 +88,15 @@ Nserve.prototype = {
             host:null,//监听地址，默认是null，即127.0.0.1/localhost/您的ip地址
             //headers头，可写入资源请求的headers头
             headers:{},
+            callbackStart:new Function,//服务创建之前，上下文是当前Nserve
+            callbackDirectorySuccess:new Function,//读取目录回调
             callback:new Function,//服务回调，上下文是当前server，参数是当前Nserve
             page404:"./404.html",//404页路径，默认是根目录下的404.html
             //默认的目录页面css样式
             cssStyle:`@font-face{font-family:'iconfont';src:url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.eot');src:url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.eot?#iefix') format('embedded-opentype'),url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.woff') format('woff'),url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.ttf') format('truetype'),url('//at.alicdn.com/t/font_415895_lqvi8hwo5j7tlnmi.svg#iconfont') format('svg')}a{line-height:40px;text-decoration:none}a span{font-family:'iconfont';margin-right:5px}a span.Directory{color:#ff8100}a span.back,a span.home{color:#000}a span.file{color:#944b00}a:hover{background-color:#e5e5e5}`,
             DirectoryTitle:"目录列表",//目录浏览标题
             isShowDirectory:true,//是否允许显示目录列表，默认显示
-            InitHomefile:"index.html",//目录页面默认请求的文件
+            InitHomefile:null,//目录页面默认请求的文件,string|Array,如果为null将显示目录列表，前提是开启了目录显示
         };
         //追加或替换option
         for(var i in option){
@@ -112,6 +121,7 @@ Nserve.prototype = {
         var port=optionExtend.port;
         var home=optionExtend.home;
         var _this = this;
+        optionExtend.callbackStart(this);
         var server = http.createServer(function(req,res){
             var fileName  = home + req.url;
             var reqUrl = req.url;
@@ -127,6 +137,7 @@ Nserve.prototype = {
                     if(req.url == "/") {
                         if(optionExtend.isShowDirectory){
                             _this.readdirStat(fileName,function (files) {
+                                optionExtend.callbackDirectorySuccess.call(_this,files,req,res);
                                 if(optionExtend.InitHomefile){
                                     var InitHomefileErr = true;
                                     if(optionExtend.InitHomefile.constructor.name == "String"){
@@ -145,9 +156,7 @@ Nserve.prototype = {
                                             }
                                         };
                                         if(InitHomefileErr){
-                                            res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                                            res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
-                                            res.end();
+                                            _this.ResourcesDoNotExist(req,res);
                                         }
                                     }else if(optionExtend.InitHomefile.constructor.name == "Array"){
                                         var InitHomefileBool = false;
@@ -172,13 +181,12 @@ Nserve.prototype = {
                                             };
                                         };
                                         if(InitHomefileErr){
-                                            res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                                            res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
-                                            res.end();
+                                            _this.ResourcesDoNotExist(req,res);
                                         }
                                     };
                                 }else {
                                     res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                                    res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
                                     res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
                                     res.write(`<span>当前URL：${req.url}    (${files.length}个文件)</span>`);
                                     res.write(`<hr>`);
@@ -196,15 +204,14 @@ Nserve.prototype = {
                                 }
                             });
                         }else {
-                            res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                            res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
-                            res.end();
+                            _this.ResourcesDoNotExist(req,res);
                         }
                     }else {
                         if(fs.existsSync(fileName)){
                             if(optionExtend.isShowDirectory){
                                 res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
                                 _this.readdirStat(fileName,function (files) {
+                                    optionExtend.callbackDirectorySuccess.call(_this,files,req,res);
                                     if(optionExtend.InitHomefile){
                                         var InitHomefileErr = true;
                                         if(optionExtend.InitHomefile.constructor.name == "String"){
@@ -223,9 +230,7 @@ Nserve.prototype = {
                                                 }
                                             };
                                             if(InitHomefileErr){
-                                                res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                                                res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
-                                                res.end();
+                                                _this.ResourcesDoNotExist(req,res);
                                             }
                                         }else if(optionExtend.InitHomefile.constructor.name == "Array"){
                                             var InitHomefileBool = false;
@@ -250,12 +255,11 @@ Nserve.prototype = {
                                                 };
                                             };
                                             if(InitHomefileErr){
-                                                res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                                                res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
-                                                res.end();
+                                                _this.ResourcesDoNotExist(req,res);
                                             }
                                         };
                                     }else {
+                                        res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
                                         res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
                                         res.write(`<span>当前URL：【${req.url}】(${files.length}个文件)</span>`);
                                         var BackUrl=  req.url.replace(/\/[^/]*\/$|\/[^/]*$/,'');
@@ -273,27 +277,9 @@ Nserve.prototype = {
                                         res.write(`<style>${optionExtend.cssStyle}</style>`);
                                         res.end();
                                     }
-                                    // res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
-                                    // res.write(`<span>当前URL：【${req.url}】(${files.length}个文件)</span>`);
-                                    // var BackUrl=  req.url.replace(/\/[^/]*\/$|\/[^/]*$/,'');
-                                    // res.write(`<a href="${(BackUrl.length > 0)? BackUrl : '/'}" style="margin-left: 50px;"><span>&#xe607;</span>返回上一级</a><a href="/" style="margin-left: 50px;"><span>&#xe608;</span>返回首页</a>`);
-                                    // res.write(`<hr>`);
-                                    // for(var i = 0,len =  files.length ; i <len; i++){
-                                    //     res.write(`<a href="${req.url}/${files[i]}" style="display: block;">${(function () {
-                                    //         var stat1 = fs.lstatSync(fileName+"/"+files[i]);
-                                    //         if(stat1.isDirectory()){
-                                    //             return `<span class="Directory">&#xe60f;</span>`;
-                                    //         };
-                                    //         return `<span class="file">&#xe647;</span>`;
-                                    //     })()+files[i]}</a>`);
-                                    // }
-                                    // res.write(`<style>${optionExtend.cssStyle}</style>`);
-                                    // res.end();
                                 });
                             }else {
-                                res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                                res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
-                                res.end();
+                                _this.ResourcesDoNotExist(req,res);
                             }
                         }else {
                             if(fs.existsSync(optionExtend.page404)){
@@ -307,9 +293,7 @@ Nserve.prototype = {
                                     res.end();
                                 });
                             }else {
-                                res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                                res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
-                                res.end();
+                                _this.ResourcesDoNotExist(req,res);
                             }
                         }
                     }
@@ -440,5 +424,11 @@ Nserve.prototype = {
         }
         return inithz;
     },
+    ResourcesDoNotExist:function (req,res) {
+        res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+        res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
+        res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
+        res.end();
+    }
 }
 module.exports = Nserve;

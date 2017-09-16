@@ -101,7 +101,7 @@ Nserve.prototype = {
                         optionExtend[i] = option[i];
                         break;
                 };
-            }else if(i == "host"|| i == "InitHomefile"){
+            }else if(i == "host" || i == "InitHomefile"){
                 optionExtend[i] = option[i];
             };
         };
@@ -114,6 +114,7 @@ Nserve.prototype = {
         var _this = this;
         var server = http.createServer(function(req,res){
             var fileName  = home + req.url;
+            var reqUrl = req.url;
             newCommand.console.warn("[请求资源]："+req.url);
             fs.readFile( fileName,function( err, data ){
                 //设置Header头
@@ -126,23 +127,58 @@ Nserve.prototype = {
                     if(req.url == "/") {
                         if(optionExtend.isShowDirectory){
                             _this.readdirStat(fileName,function (files) {
-                                if(fs.existsSync("."+req.url+optionExtend.InitHomefile)){
-                                    for(var i = 0,len = files.length ;i<len; i++){
-                                        if(files[i] == optionExtend.InitHomefile){
-                                            fs.readFile("."+req.url+files[i],function( err, data ){
-                                                if( err ){
-                                                    console.log(err)
-                                                    return;
+                                if(optionExtend.InitHomefile){
+                                    var InitHomefileErr = true;
+                                    if(optionExtend.InitHomefile.constructor.name == "String"){
+                                        for(var i = 0,len = files.length ;i<len; i++){
+                                            if(files[i] == optionExtend.InitHomefile){
+                                                InitHomefileErr = false;
+                                                fs.readFile("."+req.url+files[i],function( err, data ){
+                                                    if( err ){
+                                                        console.log(err)
+                                                        return;
+                                                    }
+                                                    res.write(data);
+                                                    res.end();
+                                                });
+                                                break;
+                                            }
+                                        };
+                                        if(InitHomefileErr){
+                                            res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                                            res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
+                                            res.end();
+                                        }
+                                    }else if(optionExtend.InitHomefile.constructor.name == "Array"){
+                                        var InitHomefileBool = false;
+                                        for(var jj = 0,lenj = optionExtend.InitHomefile.length ;jj<lenj; jj++){
+                                            for(var i = 0,len = files.length ;i<len; i++){
+                                                if(files[i] == optionExtend.InitHomefile[jj]){
+                                                    InitHomefileErr = false;
+                                                    InitHomefileBool = true;
+                                                    fs.readFile("."+req.url+files[i],function( err, data ){
+                                                        if( err ){
+                                                            console.log(err)
+                                                            return;
+                                                        }
+                                                        res.write(data);
+                                                        res.end();
+                                                    });
+                                                    break;
                                                 }
-                                                res.write(data);
-                                                res.end();
-                                            });
-                                            break;
+                                            };
+                                            if(InitHomefileBool){
+                                                break;
+                                            };
+                                        };
+                                        if(InitHomefileErr){
+                                            res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                                            res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
+                                            res.end();
                                         }
                                     };
                                 }else {
                                     res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                                    res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
                                     res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
                                     res.write(`<span>当前URL：${req.url}    (${files.length}个文件)</span>`);
                                     res.write(`<hr>`);
@@ -169,33 +205,99 @@ Nserve.prototype = {
                             if(optionExtend.isShowDirectory){
                                 res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
                                 _this.readdirStat(fileName,function (files) {
-                                    res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
-                                    res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
-                                    res.write(`<span>当前URL：【${req.url}】(${files.length}个文件)</span>`);
-                                    var BackUrl=  req.url.replace(/\/[^/]*\/$|\/[^/]*$/,'');
-                                    res.write(`<a href="${(BackUrl.length > 0)? BackUrl : '/'}" style="margin-left: 50px;"><span>&#xe607;</span>返回上一级</a><a href="/" style="margin-left: 50px;"><span>&#xe608;</span>返回首页</a>`);
-                                    res.write(`<hr>`);
-                                    for(var i = 0,len =  files.length ; i <len; i++){
-                                        res.write(`<a href="${req.url}/${files[i]}" style="display: block;">${(function () {
-                                            var stat1 = fs.lstatSync(fileName+"/"+files[i]);
-                                            if(stat1.isDirectory()){
-                                                return `<span class="Directory">&#xe60f;</span>`;
+                                    if(optionExtend.InitHomefile){
+                                        var InitHomefileErr = true;
+                                        if(optionExtend.InitHomefile.constructor.name == "String"){
+                                            for(var i = 0,len = files.length ;i<len; i++){
+                                                if(files[i] == optionExtend.InitHomefile){
+                                                    InitHomefileErr = false;
+                                                    fs.readFile(`.${req.url}/${files[i]}`,function( err, data ){
+                                                        if( err ){
+                                                            console.log(err)
+                                                            return;
+                                                        }
+                                                        res.write(data);
+                                                        res.end();
+                                                    });
+                                                    break;
+                                                }
                                             };
-                                            return `<span class="file">&#xe647;</span>`;
-                                        })()+files[i]}</a>`);
+                                            if(InitHomefileErr){
+                                                res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                                                res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
+                                                res.end();
+                                            }
+                                        }else if(optionExtend.InitHomefile.constructor.name == "Array"){
+                                            var InitHomefileBool = false;
+                                            for(var jj = 0,lenj = optionExtend.InitHomefile.length ;jj<lenj; jj++){
+                                                for(var i = 0,len = files.length ;i<len; i++){
+                                                    if(files[i] == optionExtend.InitHomefile[jj]){
+                                                        InitHomefileErr = false;
+                                                        InitHomefileBool = true;
+                                                        fs.readFile(`.${req.url}/${files[i]}`,function( err, data ){
+                                                            if( err ){
+                                                                console.log(err)
+                                                                return;
+                                                            }
+                                                            res.write(data);
+                                                            res.end();
+                                                        });
+                                                        break;
+                                                    }
+                                                };
+                                                if(InitHomefileBool){
+                                                    break;
+                                                };
+                                            };
+                                            if(InitHomefileErr){
+                                                res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
+                                                res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
+                                                res.end();
+                                            }
+                                        };
+                                    }else {
+                                        res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
+                                        res.write(`<span>当前URL：【${req.url}】(${files.length}个文件)</span>`);
+                                        var BackUrl=  req.url.replace(/\/[^/]*\/$|\/[^/]*$/,'');
+                                        res.write(`<a href="${(BackUrl.length > 0)? BackUrl : '/'}" style="margin-left: 50px;"><span>&#xe607;</span>返回上一级</a><a href="/" style="margin-left: 50px;"><span>&#xe608;</span>返回首页</a>`);
+                                        res.write(`<hr>`);
+                                        for(var i = 0,len =  files.length ; i <len; i++){
+                                            res.write(`<a href="${req.url}/${files[i]}" style="display: block;">${(function () {
+                                                var stat1 = fs.lstatSync(fileName+"/"+files[i]);
+                                                if(stat1.isDirectory()){
+                                                    return `<span class="Directory">&#xe60f;</span>`;
+                                                };
+                                                return `<span class="file">&#xe647;</span>`;
+                                            })()+files[i]}</a>`);
+                                        }
+                                        res.write(`<style>${optionExtend.cssStyle}</style>`);
+                                        res.end();
                                     }
-                                    res.write(`<style>${optionExtend.cssStyle}</style>`);
-                                    res.end();
+                                    // res.write(`<h1>${optionExtend.DirectoryTitle}</h1>`);
+                                    // res.write(`<span>当前URL：【${req.url}】(${files.length}个文件)</span>`);
+                                    // var BackUrl=  req.url.replace(/\/[^/]*\/$|\/[^/]*$/,'');
+                                    // res.write(`<a href="${(BackUrl.length > 0)? BackUrl : '/'}" style="margin-left: 50px;"><span>&#xe607;</span>返回上一级</a><a href="/" style="margin-left: 50px;"><span>&#xe608;</span>返回首页</a>`);
+                                    // res.write(`<hr>`);
+                                    // for(var i = 0,len =  files.length ; i <len; i++){
+                                    //     res.write(`<a href="${req.url}/${files[i]}" style="display: block;">${(function () {
+                                    //         var stat1 = fs.lstatSync(fileName+"/"+files[i]);
+                                    //         if(stat1.isDirectory()){
+                                    //             return `<span class="Directory">&#xe60f;</span>`;
+                                    //         };
+                                    //         return `<span class="file">&#xe647;</span>`;
+                                    //     })()+files[i]}</a>`);
+                                    // }
+                                    // res.write(`<style>${optionExtend.cssStyle}</style>`);
+                                    // res.end();
                                 });
                             }else {
                                 res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                                res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
                                 res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
                                 res.end();
                             }
                         }else {
                             if(fs.existsSync(optionExtend.page404)){
-                                fs.readFile( optionExtend.page404,function( err, page404Data ){
+                                fs.readFile(optionExtend.page404,function( err, page404Data ){
                                     if(err){
                                         console.log(err);
                                         return;
@@ -206,7 +308,6 @@ Nserve.prototype = {
                                 });
                             }else {
                                 res.writeHead(200, {'Content-type' : 'text/html; charset=utf-8'});
-                                res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
                                 res.write(`<div>对不起资源不存在</div><div>(Sorry, resource does not exist)</div>`);
                                 res.end();
                             }
@@ -214,7 +315,6 @@ Nserve.prototype = {
                     }
                 }else {
                     res.writeHead(200, {'Content-type':`${_this.getmimeType(path.extname(req.url))};`});
-                    res.write(`<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge">`);
                     res.write(data);
                     res.end();
                 }

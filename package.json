@@ -1,16 +1,24 @@
 {
-  "name": "Nserve",
+  "name": "nserves",
   "version": "0.0.0",
-  "description": "",
+  "description": "一个node服务工具，可快速便捷创建一个web服务，及其他功能",
   "main": "index.js",
   "bin":"bin/Nserve.js",
   "dependencies": {
     "ncommand": "0.0.4"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zys8119/Nserve.git"
+  },
+  "author": "张云山",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zys8119/Nserve/issues"
+  },
+  "homepage": "https://github.com/zys8119/Nserve#readme",
+  "devDependencies": {}
 }
